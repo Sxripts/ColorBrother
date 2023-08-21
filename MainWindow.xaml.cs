@@ -1,5 +1,7 @@
-﻿using System;
+﻿using SharpDX;
+using System;
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
@@ -44,6 +46,13 @@ namespace ColorBrother
             return CallNextHookEx(_hookID, nCode, wParam, lParam);
         }
 
+        private static bool ColorsAreClose(Color color1, Color color2, int tolerance = 30)
+        {
+            return Math.Abs(color1.R - color2.R) <= tolerance &&
+                   Math.Abs(color1.G - color2.G) <= tolerance &&
+                   Math.Abs(color1.B - color2.B) <= tolerance;
+        }
+
         private void CheckColorAndMoveMouse()
         {
             if (_rightMouseButtonHeld)
@@ -55,9 +64,8 @@ namespace ColorBrother
                 {
                     for (int y = 0; y < bitmap.Height; y++)
                     {
-                        if (bitmap.GetPixel(x, y) == targetColor)
+                        if (ColorsAreClose(bitmap.GetPixel(x, y), targetColor))
                         {
-                            // Move the mouse to the detected color
                             SetCursorPos(x, y);
                             return;
                         }
@@ -70,11 +78,69 @@ namespace ColorBrother
         {
             var point = element.PointToScreen(new System.Windows.Point(0, 0));
             var rect = new Rectangle((int)point.X, (int)point.Y, (int)element.ActualWidth, (int)element.ActualHeight);
-            var bitmap = new Bitmap(rect.Width, rect.Height);
-            using (var graphics = Graphics.FromImage(bitmap))
+
+            // Create DXGI Factory
+            var factory = new SharpDX.DXGI.Factory1();
+            var adapter = factory.GetAdapter1(0);
+            var device = new SharpDX.Direct3D11.Device(adapter);
+            var output = adapter.GetOutput(0);
+            var output1 = output.QueryInterface<SharpDX.DXGI.Output1>();
+
+            // Create Staging texture CPU-accessible
+            var textureDesc = new SharpDX.Direct3D11.Texture2DDescription()
             {
-                graphics.CopyFromScreen(rect.Left, rect.Top, 0, 0, rect.Size);
+                CpuAccessFlags = SharpDX.Direct3D11.CpuAccessFlags.Read,
+                BindFlags = SharpDX.Direct3D11.BindFlags.None,
+                Format = SharpDX.DXGI.Format.B8G8R8A8_UNorm,
+                Width = rect.Width,
+                Height = rect.Height,
+                OptionFlags = SharpDX.Direct3D11.ResourceOptionFlags.None,
+                MipLevels = 1,
+                ArraySize = 1,
+                SampleDescription = { Count = 1, Quality = 0 },
+                Usage = SharpDX.Direct3D11.ResourceUsage.Staging
+            };
+
+            // Duplicate the output
+            using var duplicatedOutput = output1.DuplicateOutput(device);
+
+            // Try to get duplicated frame within given time
+            duplicatedOutput.AcquireNextFrame(1000, out SharpDX.DXGI.OutputDuplicateFrameInformation duplicateFrameInformation, out SharpDX.DXGI.Resource screenResource);
+
+            // Copy resource into memory that can be accessed by the CPU
+            using var screenTexture = screenResource.QueryInterface<SharpDX.Direct3D11.Texture2D>();
+            using var stagingTexture = new SharpDX.Direct3D11.Texture2D(device, textureDesc);
+            device.ImmediateContext.CopyResource(screenTexture, stagingTexture);
+
+            // Get the desktop capture texture
+            var mapSource = device.ImmediateContext.MapSubresource(stagingTexture, 0, SharpDX.Direct3D11.MapMode.Read, SharpDX.Direct3D11.MapFlags.None);
+
+            // Create a bitmap to store the captured region
+            var bitmap = new Bitmap(rect.Width, rect.Height, PixelFormat.Format32bppArgb);
+
+            // Copy pixels from screen capture Texture to GDI bitmap
+            var boundsRect = new System.Drawing.Rectangle(0, 0, rect.Width, rect.Height);
+            var mapDest = bitmap.LockBits(boundsRect, ImageLockMode.WriteOnly, bitmap.PixelFormat);
+            var sourcePtr = mapSource.DataPointer;
+            var destPtr = mapDest.Scan0;
+            for (int y = 0; y < rect.Height; y++)
+            {
+                // Copy a single line 
+                Utilities.CopyMemory(destPtr, sourcePtr, rect.Width * 4);
+
+                // Advance pointers
+                sourcePtr = IntPtr.Add(sourcePtr, mapSource.RowPitch);
+                destPtr = IntPtr.Add(destPtr, mapDest.Stride);
             }
+
+            // Release source and dest locks
+            bitmap.UnlockBits(mapDest);
+            device.ImmediateContext.UnmapSubresource(stagingTexture, 0);
+
+            // Release all resources
+            screenResource.Dispose();
+            duplicatedOutput.ReleaseFrame();
+
             return bitmap;
         }
 
