@@ -167,7 +167,7 @@ namespace ColorBrother
         }
 
         // Windows API to find a window by its class name and title
-        [DllImport("user32.dll", SetLastError = true)]
+        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
         private static extern IntPtr FindWindow(string? lpClassName, string lpWindowName);
 
         // Windows API to get a window's position and size
