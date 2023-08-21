@@ -74,7 +74,7 @@ namespace ColorBrother
             }
         }
 
-        private static Bitmap CaptureScreen(FrameworkElement element)
+        private static Bitmap? CaptureScreen(FrameworkElement element)
         {
             var point = element.PointToScreen(new System.Windows.Point(0, 0));
             var rect = new Rectangle((int)point.X, (int)point.Y, (int)element.ActualWidth, (int)element.ActualHeight);
@@ -105,7 +105,12 @@ namespace ColorBrother
             using var duplicatedOutput = output1.DuplicateOutput(device);
 
             // Try to get duplicated frame within given time
-            duplicatedOutput.AcquireNextFrame(1000, out SharpDX.DXGI.OutputDuplicateFrameInformation duplicateFrameInformation, out SharpDX.DXGI.Resource screenResource);
+            var result = duplicatedOutput.TryAcquireNextFrame(1000, out SharpDX.DXGI.OutputDuplicateFrameInformation duplicateFrameInformation, out SharpDX.DXGI.Resource screenResource);
+            if (result.Failure)
+            {
+                // Handle failure to acquire next frame
+                return null;
+            }
 
             // Copy resource into memory that can be accessed by the CPU
             using var screenTexture = screenResource.QueryInterface<SharpDX.Direct3D11.Texture2D>();
