@@ -1,26 +1,14 @@
 ﻿<Window
-    x:Class="ColorBrother.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    Title="Aim Tracker"
-    Width="100"
-    Height="100"
     AllowsTransparency="True"
     Background="Transparent"
-    MouseRightButtonDown="MainWindow_MouseRightButtonDown"
-    MouseRightButtonUp="MainWindow_MouseRightButtonUp"
     WindowStyle="None">
-    <Grid IsHitTestVisible="False">
-        <Canvas
-            x:Name="mainCanvas"
-            Width="{Binding ElementName=mainWindow, Path=ActualWidth}"
-            Height="{Binding ElementName=mainWindow, Path=ActualHeight}">
-            <Ellipse
-                x:Name="targetCircle"
-                Width="{Binding ElementName=mainCanvas, Path=ActualWidth}"
-                Height="{Binding ElementName=mainCanvas, Path=ActualHeight}"
-                Stroke="Yellow"
-                StrokeThickness="2" />
-        </Canvas>
-    </Grid>
+    <Ellipse
+        Name="targetCircle"
+        Width="100"
+        Height="100"
+        Fill="Transparent"
+        Stroke="Red"
+        StrokeThickness="2" />
 </Window>

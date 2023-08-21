@@ -1,121 +1,106 @@
-﻿using Accord;
-using System;
-using System.Linq;
-using System.Windows;
+﻿using System;
 using System.Drawing;
-using System.Windows.Input;
-using System.Windows.Controls;
-using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using System.Windows;
+using System.Windows.Input;
+using System.Windows.Media.Imaging;
 
 namespace ColorBrother
 {
     public partial class MainWindow : Window
     {
-        private bool isRightMouseDown = false;
-        private readonly Bitmap screenCapture;
+        private IntPtr _hookID = IntPtr.Zero;
+        private bool _rightMouseButtonHeld = false;
 
         public MainWindow()
         {
             InitializeComponent();
-            screenCapture = new Bitmap((int)SystemParameters.PrimaryScreenWidth, (int)SystemParameters.PrimaryScreenHeight);
+            _hookID = SetHook(HookCallback);
         }
 
-        private void MainWindow_MouseRightButtonDown(object sender, MouseButtonEventArgs e) => isRightMouseDown = true;
-
-        private void MainWindow_MouseRightButtonUp(object sender, MouseButtonEventArgs e) => isRightMouseDown = false;
-
-        private void CompositionTarget_Rendering(object sender, EventArgs e)
+        private IntPtr SetHook(LowLevelMouseProc proc)
         {
-            if (isRightMouseDown)
+            using (System.Diagnostics.Process curProcess = System.Diagnostics.Process.GetCurrentProcess())
+            using (System.Diagnostics.ProcessModule curModule = curProcess.MainModule)
             {
-                // Center of the screen, assuming targetCircle is always in the center
-                System.Windows.Point targetCenter = new(SystemParameters.PrimaryScreenWidth / 2, SystemParameters.PrimaryScreenHeight / 2);
-                System.Windows.Point currentMousePosition = Mouse.GetPosition(this);
-
-                double distance = (targetCenter - currentMousePosition).Length;
-
-                // Checks if the mouse is within the circle
-                if (distance <= targetCircle.Width / 2)
-                {
-                    System.Windows.Media.Color pixelColor = GetPixelColorAtMousePosition(currentMousePosition);
-
-                    if (pixelColor == System.Windows.Media.Colors.Yellow)
-                    {
-                        // Move the mouse to the yellow color's position
-                        MoveMouseToPosition(new IntPoint((int)currentMousePosition.X, (int)currentMousePosition.Y));
-                    }
-                }
+                return SetWindowsHookEx(WH_MOUSE_LL, proc, GetModuleHandle(curModule.ModuleName), 0);
             }
         }
 
-        private List<IntPoint> GetColorObjectPoints(System.Windows.Point centerPosition, System.Windows.Media.Color targetColor)
+        private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
         {
-            List<IntPoint> colorPoints = new();
-
-            using (Graphics graphics = Graphics.FromImage(screenCapture))
+            if (nCode >= 0 && MouseMessages.WM_RBUTTONDOWN == (MouseMessages)wParam)
             {
-                graphics.CopyFromScreen(0, 0, 0, 0, screenCapture.Size);
+                _rightMouseButtonHeld = true;
+            }
+            else if (nCode >= 0 && MouseMessages.WM_RBUTTONUP == (MouseMessages)wParam)
+            {
+                _rightMouseButtonHeld = false;
             }
 
-            int radius = (int)targetCircle.Width / 2;
-            Rectangle cropRect = new((int)centerPosition.X - radius, (int)centerPosition.Y - radius, radius * 2, radius * 2);
-            using (Bitmap croppedCapture = screenCapture.Clone(cropRect, screenCapture.PixelFormat))
+            if (_rightMouseButtonHeld)
             {
-                // Analyze the pixels within the cropped region to find the target color
-                for (int y = 0; y < croppedCapture.Height; y++)
-                {
-                    for (int x = 0; x < croppedCapture.Width; x++)
-                    {
-                        Color pixelColor = croppedCapture.GetPixel(x, y);
+                CheckColorAndMoveMouse();
+            }
 
-                        if (pixelColor.R == targetColor.R && pixelColor.G == targetColor.G && pixelColor.B == targetColor.B)
+            return CallNextHookEx(_hookID, nCode, wParam, lParam);
+        }
+
+        private void CheckColorAndMoveMouse()
+        {
+            if (_rightMouseButtonHeld)
+            {
+                var bitmap = CaptureScreen(targetCircle);
+                var targetColor = ColorTranslator.FromHtml("#e5ed02");
+
+                for (int x = 0; x < bitmap.Width; x++)
+                {
+                    for (int y = 0; y < bitmap.Height; y++)
+                    {
+                        if (bitmap.GetPixel(x, y) == targetColor)
                         {
-                            colorPoints.Add(new IntPoint(x + cropRect.X, y + cropRect.Y));
+                            // Move the mouse to the detected color
+                            SetCursorPos(x, y);
+                            return;
                         }
                     }
                 }
             }
-
-            return colorPoints;
         }
 
-        private static System.Windows.Media.Color GetPixelColorAtMousePosition(System.Windows.Point mousePosition)
+        private Bitmap CaptureScreen(FrameworkElement element)
         {
-            IntPtr screenDC = NativeMethods.GetDC(IntPtr.Zero);
-            System.Windows.Media.Color pixelColor = System.Windows.Media.Color.FromArgb(0, 0, 0, 0);
-
-            if (screenDC != IntPtr.Zero)
-            {
-                int x = (int)mousePosition.X;
-                int y = (int)mousePosition.Y;
-
-                int color = NativeMethods.GetPixel(screenDC, x, y);
-                pixelColor = System.Windows.Media.Color.FromArgb((byte)(color >> 16), (byte)(color >> 8), (byte)color, 0);
-
-                _ = NativeMethods.ReleaseDC(IntPtr.Zero, screenDC);
-            }
-
-            return pixelColor;
+            // Implement the logic to capture the screen within the target circle's bounds
+            // You can use Accord.NET or other methods to capture the screen region
+            // Return the captured bitmap for analysis
         }
 
-        [DllImport("user32.dll")]
-        public static extern bool SetCursorPos(int x, int y);
+        // P/Invoke declarations
+        private delegate IntPtr LowLevelMouseProc(int nCode, IntPtr wParam, IntPtr lParam);
 
-        private void MoveMouseToPosition(IntPoint position)
+        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        private static extern IntPtr SetWindowsHookEx(int idHook, LowLevelMouseProc lpfn, IntPtr hMod, uint dwThreadId);
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool UnhookWindowsHookEx(IntPtr hhk);
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        private static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool SetCursorPos(int X, int Y);
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        private static extern IntPtr GetModuleHandle(string lpModuleName);
+
+        private const int WH_MOUSE_LL = 14;
+
+        private enum MouseMessages
         {
-            System.Windows.Point globalPosition = this.PointToScreen(new System.Windows.Point(position.X, position.Y));
-            SetCursorPos((int)globalPosition.X, (int)globalPosition.Y);
+            WM_RBUTTONDOWN = 0x0204,
+            WM_RBUTTONUP = 0x0205
         }
-    }
-
-    internal static class NativeMethods
-    {
-        [DllImport("user32.dll")]
-        public static extern IntPtr GetDC(IntPtr hWnd);
-        [DllImport("user32.dll")]
-        public static extern int ReleaseDC(IntPtr hWnd, IntPtr hDC);
-        [DllImport("gdi32.dll")]
-        public static extern int GetPixel(IntPtr hdc, int nXPos, int nYPos);
     }
 }
