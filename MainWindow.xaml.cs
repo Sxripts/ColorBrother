@@ -18,6 +18,14 @@ namespace ColorBrother
         {
             InitializeComponent();
             _hookID = SetHook(HookCallback);
+            var FovWindow = new FovWindow();
+            FovWindow.Show();
+        }
+
+        private void ShowFovWindowButton_Click(object sender, RoutedEventArgs e)
+        {
+            var FovWindow = new FovWindow();
+            FovWindow.Show();
         }
 
         private static IntPtr SetHook(LowLevelMouseProc proc)
