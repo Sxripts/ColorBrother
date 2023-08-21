@@ -70,9 +70,20 @@ namespace ColorBrother
 
         private Bitmap CaptureScreen(FrameworkElement element)
         {
-            // Implement the logic to capture the screen within the target circle's bounds
-            // You can use Accord.NET or other methods to capture the screen region
-            // Return the captured bitmap for analysis
+            // Get the position and size of the target circle
+            var point = element.PointToScreen(new System.Windows.Point(0, 0));
+            var rect = new Rectangle((int)point.X, (int)point.Y, (int)element.ActualWidth, (int)element.ActualHeight);
+
+            // Create a bitmap to store the captured region
+            var bitmap = new Bitmap(rect.Width, rect.Height);
+
+            // Use Graphics to capture the screen region
+            using (var graphics = Graphics.FromImage(bitmap))
+            {
+                graphics.CopyFromScreen(rect.Left, rect.Top, 0, 0, rect.Size);
+            }
+
+            return bitmap;
         }
 
         // P/Invoke declarations
