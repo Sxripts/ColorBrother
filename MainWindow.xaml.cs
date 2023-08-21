@@ -151,6 +151,38 @@ namespace ColorBrother
 
         private delegate IntPtr LowLevelMouseProc(int nCode, IntPtr wParam, IntPtr lParam);
 
+        private void UpdateTargetCircle()
+        {
+            // Find the target window by its title (replace with the actual title)
+            IntPtr targetWindowHandle = FindWindow(null, "Target Window Title");
+            if (targetWindowHandle == IntPtr.Zero) return;
+
+            // Get the target window's position and size
+            GetWindowRect(targetWindowHandle, out RECT rect);
+
+            // Update the targetCircle's position and size to match the target window
+            targetCircle.Width = rect.Right - rect.Left;
+            targetCircle.Height = rect.Bottom - rect.Top;
+            targetCircle.Margin = new Thickness(rect.Left, rect.Top, 0, 0);
+        }
+
+        // Windows API to find a window by its class name and title
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern IntPtr FindWindow(string? lpClassName, string lpWindowName);
+
+        // Windows API to get a window's position and size
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool GetWindowRect(IntPtr hwnd, out RECT lpRect);
+
+        // Structure to hold the position and size of a window
+        private struct RECT
+        {
+            public int Left;
+            public int Top;
+            public int Right;
+            public int Bottom;
+        }
+
         [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
         private static extern IntPtr SetWindowsHookEx(int idHook, LowLevelMouseProc lpfn, IntPtr hMod, uint dwThreadId);
 
