@@ -9,7 +9,7 @@ namespace ColorBrother
 {
     public partial class MainWindow : Window
     {
-        private IntPtr _hookID = IntPtr.Zero;
+        private readonly IntPtr _hookID = IntPtr.Zero;
         private bool _rightMouseButtonHeld = false;
 
         public MainWindow()
@@ -18,13 +18,11 @@ namespace ColorBrother
             _hookID = SetHook(HookCallback);
         }
 
-        private IntPtr SetHook(LowLevelMouseProc proc)
+        private static IntPtr SetHook(LowLevelMouseProc proc)
         {
-            using (System.Diagnostics.Process curProcess = System.Diagnostics.Process.GetCurrentProcess())
-            using (System.Diagnostics.ProcessModule curModule = curProcess.MainModule)
-            {
-                return SetWindowsHookEx(WH_MOUSE_LL, proc, GetModuleHandle(curModule.ModuleName), 0);
-            }
+            using System.Diagnostics.Process curProcess = System.Diagnostics.Process.GetCurrentProcess();
+            using System.Diagnostics.ProcessModule curModule = curProcess.MainModule;
+            return SetWindowsHookEx(WH_MOUSE_LL, proc, GetModuleHandle(curModule.ModuleName), 0);
         }
 
         private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
@@ -68,25 +66,18 @@ namespace ColorBrother
             }
         }
 
-        private Bitmap CaptureScreen(FrameworkElement element)
+        private static Bitmap CaptureScreen(FrameworkElement element)
         {
-            // Get the position and size of the target circle
             var point = element.PointToScreen(new System.Windows.Point(0, 0));
             var rect = new Rectangle((int)point.X, (int)point.Y, (int)element.ActualWidth, (int)element.ActualHeight);
-
-            // Create a bitmap to store the captured region
             var bitmap = new Bitmap(rect.Width, rect.Height);
-
-            // Use Graphics to capture the screen region
             using (var graphics = Graphics.FromImage(bitmap))
             {
                 graphics.CopyFromScreen(rect.Left, rect.Top, 0, 0, rect.Size);
             }
-
             return bitmap;
         }
 
-        // P/Invoke declarations
         private delegate IntPtr LowLevelMouseProc(int nCode, IntPtr wParam, IntPtr lParam);
 
         [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
@@ -103,7 +94,7 @@ namespace ColorBrother
         [return: MarshalAs(UnmanagedType.Bool)]
         private static extern bool SetCursorPos(int X, int Y);
 
-        [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
         private static extern IntPtr GetModuleHandle(string lpModuleName);
 
         private const int WH_MOUSE_LL = 14;
