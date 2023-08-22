@@ -5,13 +5,12 @@
     AllowsTransparency="True"
     Background="Transparent"
     ShowInTaskbar="False"
+    Topmost="True"
     WindowStyle="None">
     <Ellipse
-        Name="targetCircleElement"
+        Name="targetCircle"
         Width="100"
         Height="100"
         Fill="Transparent"
-        IsHitTestVisible="False"
-        Stroke="Yellow"
-        StrokeThickness="1" />
+        Stroke="Yellow" />
 </Window>

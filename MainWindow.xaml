@@ -16,8 +16,8 @@
                 Margin="20,20,0,0"
                 HorizontalAlignment="Left"
                 VerticalAlignment="Top"
-                Click="ShowFovWindowButton_Click"
-                Content="Fov Changer"
+                Click="ToggleFOV_Click"
+                Content="Toggle FOV"
                 FontSize="15" />
         </Grid>
     </Border>

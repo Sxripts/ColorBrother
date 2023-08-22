@@ -1,76 +1,55 @@
-﻿using SharpDX;
-using System;
+﻿using System;
 using System.Drawing;
-using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
+using System.Windows.Threading;
 
 namespace ColorBrother
 {
     public partial class FovWindow : Window
     {
-        private readonly FrameworkElement targetCircle;
-        private readonly IntPtr _hookID = IntPtr.Zero;
-        private bool _rightMouseButtonHeld = false;
+        private readonly DispatcherTimer _timer;
 
-        public FovWindow()
+        public OverlayWindow()
         {
             InitializeComponent();
-            targetCircle = new Ellipse();
-            _hookID = SetHook(HookCallback);
-            this.Loaded += (s, e) => UpdateTargetCircle();
+            PositionOverlay();
+
+            _timer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(10) // Adjust as needed
+            };
+            _timer.Tick += Timer_Tick;
+            _timer.Start();
         }
 
-        private static IntPtr SetHook(LowLevelMouseProc proc)
+        private void PositionOverlay()
         {
-            using System.Diagnostics.Process curProcess = System.Diagnostics.Process.GetCurrentProcess();
-            using System.Diagnostics.ProcessModule curModule = curProcess.MainModule;
-            return SetWindowsHookEx(WH_MOUSE_LL, proc, GetModuleHandle(curModule.ModuleName), 0);
+            // Center the overlay on the screen
+            Left = (SystemParameters.PrimaryScreenWidth - Width) / 2;
+            Top = (SystemParameters.PrimaryScreenHeight - Height) / 2;
         }
 
-        private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
+        private void Timer_Tick(object sender, EventArgs e)
         {
-            if (nCode >= 0 && MouseMessages.WM_RBUTTONDOWN == (MouseMessages)wParam)
+            if (Mouse.RightButton == MouseButtonState.Pressed)
             {
-                _rightMouseButtonHeld = true;
-            }
-            else if (nCode >= 0 && MouseMessages.WM_RBUTTONUP == (MouseMessages)wParam)
-            {
-                _rightMouseButtonHeld = false;
-            }
+                // Capture the screen within the target circle
+                var screenBitmap = CaptureScreen((int)Left, (int)Top, (int)Width, (int)Height);
 
-            if (_rightMouseButtonHeld)
-            {
-                CheckColorAndMoveMouse();
-            }
-
-            return CallNextHookEx(_hookID, nCode, wParam, lParam);
-        }
-
-        private static bool ColorsAreClose(Color color1, Color color2, int tolerance = 30)
-        {
-            return Math.Abs(color1.R - color2.R) <= tolerance &&
-                   Math.Abs(color1.G - color2.G) <= tolerance &&
-                   Math.Abs(color1.B - color2.B) <= tolerance;
-        }
-
-        private void CheckColorAndMoveMouse()
-        {
-            if (_rightMouseButtonHeld)
-            {
-                var bitmap = CaptureScreen(targetCircle);
+                // Check for the specified color
                 var targetColor = ColorTranslator.FromHtml("#e5ed02");
-
-                for (int x = 0; x < bitmap.Width; x++)
+                for (int y = 0; y < screenBitmap.Height; y++)
                 {
-                    for (int y = 0; y < bitmap.Height; y++)
+                    for (int x = 0; x < screenBitmap.Width; x++)
                     {
-                        if (ColorsAreClose(bitmap.GetPixel(x, y), targetColor))
+                        var pixelColor = screenBitmap.GetPixel(x, y);
+                        if (IsColorMatch(pixelColor, targetColor))
                         {
-                            SetCursorPos(x, y);
+                            // Move the mouse to the color
+                            SetCursorPos((int)Left + x, (int)Top + y);
                             return;
                         }
                     }
@@ -78,140 +57,24 @@ namespace ColorBrother
             }
         }
 
-        private static Bitmap? CaptureScreen(FrameworkElement element)
+        private bool IsColorMatch(Color color1, Color color2)
         {
-            if (element == null) return null;
-
-            var point = element.PointToScreen(new System.Windows.Point(0, 0));
-            var rect = new System.Drawing.Rectangle((int)point.X, (int)point.Y, (int)element.ActualWidth, (int)element.ActualHeight);
-
-            // Create DXGI Factory
-            var factory = new SharpDX.DXGI.Factory1();
-            var adapter = factory.GetAdapter1(0);
-            var device = new SharpDX.Direct3D11.Device(adapter);
-            var output = adapter.GetOutput(0);
-            var output1 = output.QueryInterface<SharpDX.DXGI.Output1>();
-
-            // Create Staging texture CPU-accessible
-            var textureDesc = new SharpDX.Direct3D11.Texture2DDescription()
-            {
-                CpuAccessFlags = SharpDX.Direct3D11.CpuAccessFlags.Read,
-                BindFlags = SharpDX.Direct3D11.BindFlags.None,
-                Format = SharpDX.DXGI.Format.B8G8R8A8_UNorm,
-                Width = rect.Width,
-                Height = rect.Height,
-                OptionFlags = SharpDX.Direct3D11.ResourceOptionFlags.None,
-                MipLevels = 1,
-                ArraySize = 1,
-                SampleDescription = { Count = 1, Quality = 0 },
-                Usage = SharpDX.Direct3D11.ResourceUsage.Staging
-            };
-
-            // Duplicate the output
-            using var duplicatedOutput = output1.DuplicateOutput(device);
-
-            // Try to get duplicated frame within given time
-            var result = duplicatedOutput.TryAcquireNextFrame(1000, out SharpDX.DXGI.OutputDuplicateFrameInformation duplicateFrameInformation, out SharpDX.DXGI.Resource screenResource);
-            if (result.Failure)
-            {
-                // Handle failure to acquire next frame
-                return null;
-            }
-
-            // Copy resource into memory that can be accessed by the CPU
-            using var screenTexture = screenResource.QueryInterface<SharpDX.Direct3D11.Texture2D>();
-            using var stagingTexture = new SharpDX.Direct3D11.Texture2D(device, textureDesc);
-            device.ImmediateContext.CopyResource(screenTexture, stagingTexture);
-
-            // Get the desktop capture texture
-            var mapSource = device.ImmediateContext.MapSubresource(stagingTexture, 0, SharpDX.Direct3D11.MapMode.Read, SharpDX.Direct3D11.MapFlags.None);
-
-            // Create a bitmap to store the captured region
-            var bitmap = new Bitmap(rect.Width, rect.Height, PixelFormat.Format32bppArgb);
-
-            // Copy pixels from screen capture Texture to GDI bitmap
-            var boundsRect = new System.Drawing.Rectangle(0, 0, rect.Width, rect.Height);
-            var mapDest = bitmap.LockBits(boundsRect, ImageLockMode.WriteOnly, bitmap.PixelFormat);
-            var sourcePtr = mapSource.DataPointer;
-            var destPtr = mapDest.Scan0;
-            for (int y = 0; y < rect.Height; y++)
-            {
-                // Copy a single line 
-                Utilities.CopyMemory(destPtr, sourcePtr, rect.Width * 4);
-
-                // Advance pointers
-                sourcePtr = IntPtr.Add(sourcePtr, mapSource.RowPitch);
-                destPtr = IntPtr.Add(destPtr, mapDest.Stride);
-            }
-
-            // Release source and dest locks
-            bitmap.UnlockBits(mapDest);
-            device.ImmediateContext.UnmapSubresource(stagingTexture, 0);
-
-            // Release all resources
-            screenResource.Dispose();
-            duplicatedOutput.ReleaseFrame();
-
-            return bitmap;
+            // Implement logic to determine if the colors are a close match
+            // This could involve checking the Euclidean distance between the colors, etc.
+            // Adjust the threshold as needed
+            return Math.Abs(color1.R - color2.R) < 10 &&
+                   Math.Abs(color1.G - color2.G) < 10 &&
+                   Math.Abs(color1.B - color2.B) < 10;
         }
 
-        private delegate IntPtr LowLevelMouseProc(int nCode, IntPtr wParam, IntPtr lParam);
-
-        private void UpdateTargetCircle()
+        private Bitmap CaptureScreen(int left, int top, int width, int height)
         {
-            double screenWidth = SystemParameters.PrimaryScreenWidth;
-            double screenHeight = SystemParameters.PrimaryScreenHeight;
-
-            double left = (screenWidth - targetCircleElement.Width) / 2;
-            double top = (screenHeight - targetCircleElement.Height) / 2;
-
-            left -= (this.Width - targetCircleElement.Width) / 2;
-            top -= (this.Height - targetCircleElement.Height) / 2;
-
-            this.Left = left;
-            this.Top = top;
+            // Implement logic to capture the screen within the specified bounds
+            // You can use Accord.NET or other methods to achieve this
+            // Return the captured bitmap
         }
-
-        // Windows API to find a window by its class name and title
-        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
-        private static extern IntPtr FindWindow(string? lpClassName, string lpWindowName);
-
-        // Windows API to get a window's position and size
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern bool GetWindowRect(IntPtr hwnd, out RECT lpRect);
-
-        // Structure to hold the position and size of a window
-        private struct RECT
-        {
-            public int Left;
-            public int Top;
-            public int Right;
-            public int Bottom;
-        }
-
-        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-        private static extern IntPtr SetWindowsHookEx(int idHook, LowLevelMouseProc lpfn, IntPtr hMod, uint dwThreadId);
-
-        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        private static extern bool UnhookWindowsHookEx(IntPtr hhk);
-
-        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-        private static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
 
         [DllImport("user32.dll")]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        private static extern bool SetCursorPos(int X, int Y);
-
-        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-        private static extern IntPtr GetModuleHandle(string lpModuleName);
-
-        private const int WH_MOUSE_LL = 14;
-
-        private enum MouseMessages
-        {
-            WM_RBUTTONDOWN = 0x0204,
-            WM_RBUTTONUP = 0x0205
-        }
+        private static extern bool SetCursorPos(int x, int y);
     }
 }
