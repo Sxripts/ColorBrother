@@ -19,6 +19,7 @@ namespace ColorBrother
         public FovWindow()
         {
             InitializeComponent();
+            targetCircle = new Ellipse();
             _hookID = SetHook(HookCallback);
         }
 
@@ -78,6 +79,8 @@ namespace ColorBrother
 
         private static Bitmap? CaptureScreen(FrameworkElement element)
         {
+            if (element == null) return null;
+
             var point = element.PointToScreen(new System.Windows.Point(0, 0));
             var rect = new System.Drawing.Rectangle((int)point.X, (int)point.Y, (int)element.ActualWidth, (int)element.ActualHeight);
 
