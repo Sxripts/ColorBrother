@@ -11,6 +11,7 @@
         Width="100"
         Height="100"
         Fill="Transparent"
+        IsHitTestVisible="False"
         Stroke="Yellow"
         StrokeThickness="1" />
 </Window>

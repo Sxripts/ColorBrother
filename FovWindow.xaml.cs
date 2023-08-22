@@ -21,6 +21,7 @@ namespace ColorBrother
             InitializeComponent();
             targetCircle = new Ellipse();
             _hookID = SetHook(HookCallback);
+            this.Loaded += (s, e) => UpdateTargetCircle();
         }
 
         private static IntPtr SetHook(LowLevelMouseProc proc)
@@ -158,17 +159,17 @@ namespace ColorBrother
 
         private void UpdateTargetCircle()
         {
-            // Find the target window by its title (replace with the actual title)
-            IntPtr targetWindowHandle = FindWindow(null, "Target Window Title");
-            if (targetWindowHandle == IntPtr.Zero) return;
+            double screenWidth = SystemParameters.PrimaryScreenWidth;
+            double screenHeight = SystemParameters.PrimaryScreenHeight;
 
-            // Get the target window's position and size
-            GetWindowRect(targetWindowHandle, out RECT rect);
+            double left = (screenWidth - targetCircleElement.Width) / 2;
+            double top = (screenHeight - targetCircleElement.Height) / 2;
 
-            // Update the targetCircle's position and size to match the target window
-            targetCircle.Width = rect.Right - rect.Left;
-            targetCircle.Height = rect.Bottom - rect.Top;
-            targetCircle.Margin = new Thickness(rect.Left, rect.Top, 0, 0);
+            left -= (this.Width - targetCircleElement.Width) / 2;
+            top -= (this.Height - targetCircleElement.Height) / 2;
+
+            this.Left = left;
+            this.Top = top;
         }
 
         // Windows API to find a window by its class name and title
