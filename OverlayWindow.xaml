@@ -1,5 +1,5 @@
 ﻿<Window
-    x:Class="ColorBrother.CrosshairWindow"
+    x:Class="ColorBrother.OverlayWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -8,17 +8,10 @@
     AllowsTransparency="True"
     Background="Transparent"
     ShowInTaskbar="False"
-    Topmost="True"
-    WindowStartupLocation="CenterScreen"
     WindowStyle="None">
-
-    <Grid>
-        <Ellipse
-            Width="50"
-            Height="50"
-            HorizontalAlignment="Center"
-            VerticalAlignment="Center"
-            Stroke="Red"
-            StrokeThickness="2" />
-    </Grid>
+    <Ellipse
+        Width="50"
+        Height="50"
+        Stroke="Red"
+        StrokeThickness="2" />
 </Window>

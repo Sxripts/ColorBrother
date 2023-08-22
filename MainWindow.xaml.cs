@@ -4,20 +4,20 @@ namespace ColorBrother
 {
     public partial class MainWindow : Window
     {
-        private CrosshairWindow _crosshairWindow;
+        private readonly OverlayWindow _overlayWindow;
 
         public MainWindow()
         {
             InitializeComponent();
-            _crosshairWindow = new CrosshairWindow();
+            _overlayWindow = new OverlayWindow();
         }
 
-        private void OnToggleCrosshair(object sender, RoutedEventArgs e)
+        private void ToggleOverlay(object sender, RoutedEventArgs e)
         {
-            if (_crosshairWindow.IsVisible)
-                _crosshairWindow.Hide();
+            if (_overlayWindow.IsVisible)
+                _overlayWindow.Hide();
             else
-                _crosshairWindow.Show();
+                _overlayWindow.Show();
         }
     }
 }
