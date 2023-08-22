@@ -7,9 +7,18 @@
     AllowsTransparency="True"
     Background="Transparent"
     WindowStyle="None">
+
     <Border Background="#FF081D2F" CornerRadius="15">
         <Grid>
-            <Button Click="ShowFovWindowButton_Click" />
+            <Button
+                Width="105"
+                Height="30"
+                Margin="20,20,0,0"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Top"
+                Click="ShowFovWindowButton_Click"
+                Content="Fov Changer"
+                FontSize="15" />
         </Grid>
     </Border>
 </Window>

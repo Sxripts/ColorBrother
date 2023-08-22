@@ -6,11 +6,13 @@ using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
+using System.Windows.Shapes;
 
 namespace ColorBrother
 {
     public partial class MainWindow : Window
     {
+        private readonly FrameworkElement targetCircle;
         private readonly IntPtr _hookID = IntPtr.Zero;
         private bool _rightMouseButtonHeld = false;
 
@@ -18,14 +20,21 @@ namespace ColorBrother
         {
             InitializeComponent();
             _hookID = SetHook(HookCallback);
+            targetCircle = new Ellipse();
             var FovWindow = new FovWindow();
             FovWindow.Show();
         }
 
         private void ShowFovWindowButton_Click(object sender, RoutedEventArgs e)
         {
-            var FovWindow = new FovWindow();
-            FovWindow.Show();
+            if (targetCircle.Visibility == Visibility.Visible)
+            {
+                targetCircle.Visibility = Visibility.Hidden;
+            }
+            else
+            {
+                targetCircle.Visibility = Visibility.Visible;
+            }
         }
 
         private static IntPtr SetHook(LowLevelMouseProc proc)
@@ -85,7 +94,7 @@ namespace ColorBrother
         private static Bitmap? CaptureScreen(FrameworkElement element)
         {
             var point = element.PointToScreen(new System.Windows.Point(0, 0));
-            var rect = new Rectangle((int)point.X, (int)point.Y, (int)element.ActualWidth, (int)element.ActualHeight);
+            var rect = new System.Drawing.Rectangle((int)point.X, (int)point.Y, (int)element.ActualWidth, (int)element.ActualHeight);
 
             // Create DXGI Factory
             var factory = new SharpDX.DXGI.Factory1();
