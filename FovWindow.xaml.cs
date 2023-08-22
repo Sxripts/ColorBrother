@@ -12,15 +12,11 @@ namespace ColorBrother
     {
         private readonly DispatcherTimer _timer;
 
-        public OverlayWindow()
+        public FovWindow() // Corrected constructor name
         {
             InitializeComponent();
             PositionOverlay();
-
-            _timer = new DispatcherTimer
-            {
-                Interval = TimeSpan.FromMilliseconds(10) // Adjust as needed
-            };
+            _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(10) };
             _timer.Tick += Timer_Tick;
             _timer.Start();
         }
