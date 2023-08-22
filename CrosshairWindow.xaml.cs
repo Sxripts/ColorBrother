@@ -6,6 +6,7 @@ using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
+using System.Windows.Forms;
 
 namespace ColorBrother
 {
@@ -79,9 +80,6 @@ namespace ColorBrother
 
         [DllImport("user32.dll")]
         public static extern bool SetCursorPos(int x, int y);
-
-        [DllImport("user32.dll")]
-        public static extern bool GetCursorPos(out System.Drawing.Point lpPoint);
 
         // Your specific yellow color
         private readonly Color targetColor = ColorTranslator.FromHtml("#FFFF00");
