@@ -36,19 +36,18 @@ namespace ColorBrother
         {
             if (Mouse.RightButton == MouseButtonState.Pressed)
             {
-                // Capture the screen within the target circle
                 var screenBitmap = CaptureScreen((int)Left, (int)Top, (int)Width, (int)Height);
+                var targetColor = ColorTranslator.FromHtml("#e5ed02"); // Target color
 
-                // Check for the specified color
-                var targetColor = ColorTranslator.FromHtml("#e5ed02");
                 for (int y = 0; y < screenBitmap.Height; y++)
                 {
                     for (int x = 0; x < screenBitmap.Width; x++)
                     {
                         var pixelColor = screenBitmap.GetPixel(x, y);
-                        if (IsColorMatch(pixelColor, targetColor))
+                        bool isMatch = IsColorMatch(pixelColor, targetColor); // Check if colors match
+
+                        if (isMatch)
                         {
-                            // Move the mouse to the color
                             SetCursorPos((int)Left + x, (int)Top + y);
                             return;
                         }
@@ -59,12 +58,17 @@ namespace ColorBrother
 
         private bool IsColorMatch(Color color1, Color color2)
         {
-            // Implement logic to determine if the colors are a close match
-            // This could involve checking the Euclidean distance between the colors, etc.
-            // Adjust the threshold as needed
-            return Math.Abs(color1.R - color2.R) < 10 &&
-                   Math.Abs(color1.G - color2.G) < 10 &&
-                   Math.Abs(color1.B - color2.B) < 10;
+            // Calculate the Euclidean distance between the two colors
+            int redDifference = color1.R - color2.R;
+            int greenDifference = color1.G - color2.G;
+            int blueDifference = color1.B - color2.B;
+            double distance = Math.Sqrt(redDifference * redDifference + greenDifference * greenDifference + blueDifference * blueDifference);
+
+            // Define a threshold for what constitutes a "close match"
+            // You can adjust this value based on your specific requirements
+            const double threshold = 50.0;
+
+            return distance < threshold;
         }
 
         private Bitmap CaptureScreen(int left, int top, int width, int height)
