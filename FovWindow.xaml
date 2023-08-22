@@ -4,12 +4,13 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     AllowsTransparency="True"
     Background="Transparent"
+    ShowInTaskbar="False"
     WindowStyle="None">
     <Ellipse
         Name="targetCircleElement"
         Width="100"
         Height="100"
         Fill="Transparent"
-        Stroke="Red"
-        StrokeThickness="2" />
+        Stroke="Yellow"
+        StrokeThickness="1" />
 </Window>
