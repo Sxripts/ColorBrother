@@ -1,37 +1,23 @@
-﻿using SharpDX;
-using System;
-using System.Drawing;
-using System.Drawing.Imaging;
-using System.Runtime.InteropServices;
-using System.Windows;
-using System.Windows.Input;
-using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
+﻿using System.Windows;
 
 namespace ColorBrother
 {
     public partial class MainWindow : Window
     {
-        private FovWindow _fovWindow;
+        private CrosshairWindow _crosshairWindow;
 
         public MainWindow()
         {
             InitializeComponent();
+            _crosshairWindow = new CrosshairWindow();
         }
 
-        private void ToggleFOV_Click(object sender, RoutedEventArgs e)
+        private void OnToggleCrosshair(object sender, RoutedEventArgs e)
         {
-            if (_fovWindow == null)
-            {
-                _fovWindow = new FovWindow();
-                _fovWindow.Show();
-            }
+            if (_crosshairWindow.IsVisible)
+                _crosshairWindow.Hide();
             else
-            {
-                _fovWindow.Close();
-                _fovWindow = null;
-            }
+                _crosshairWindow.Show();
         }
-
     }
 }
