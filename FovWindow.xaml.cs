@@ -69,9 +69,12 @@ namespace ColorBrother
 
         private Bitmap CaptureScreen(int left, int top, int width, int height)
         {
-            // Implement logic to capture the screen within the specified bounds
-            // You can use Accord.NET or other methods to achieve this
-            // Return the captured bitmap
+            var bitmap = new Bitmap(width, height);
+            using (var graphics = Graphics.FromImage(bitmap))
+            {
+                graphics.CopyFromScreen(left, top, 0, 0, new System.Drawing.Size(width, height));
+            }
+            return bitmap;
         }
 
         [DllImport("user32.dll")]
