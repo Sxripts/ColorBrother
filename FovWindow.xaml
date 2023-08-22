@@ -6,7 +6,7 @@
     Background="Transparent"
     WindowStyle="None">
     <Ellipse
-        Name="targetCircle"
+        Name="targetCircleElement"
         Width="100"
         Height="100"
         Fill="Transparent"

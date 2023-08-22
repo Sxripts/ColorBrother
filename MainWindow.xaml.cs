@@ -12,12 +12,25 @@ namespace ColorBrother
 {
     public partial class MainWindow : Window
     {
+        private FovWindow? fovWindow;
 
         public MainWindow()
         {
             InitializeComponent();
         }
 
-
+        private void ShowFovWindowButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (fovWindow != null)
+            {
+                fovWindow.Close();
+                fovWindow = null;
+            }
+            else
+            {
+                fovWindow = new FovWindow();
+                fovWindow.Show();
+            }
+        }
     }
 }
